@@ -100,6 +100,7 @@ public class DexMojo extends AbstractAndroidMojo {
 		}
 		commands.add("--dex"                                   );
 		commands.add("--output=" + outputFile.getAbsolutePath());
+		commands.add("--core-library");
 		commands.add(classesOutputDirectory.getAbsolutePath()  );
 		getLog().info(getAndroidSdk().getPathForTool("dx") + " " + commands.toString());
 		try {
