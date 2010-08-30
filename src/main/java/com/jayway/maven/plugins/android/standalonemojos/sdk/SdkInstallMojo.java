@@ -110,7 +110,7 @@ extends AbstractSdkMojo
 
 			if(file!=null && file.exists())
 			{
-				install(file, getInstallDir(sample), true, true);
+				install(file, getInstallDir(sample), overwrite, true);
 			}
 		}
 		
@@ -121,7 +121,7 @@ extends AbstractSdkMojo
 
 			if(file!=null && file.exists())
 			{
-				install(file, getInstallDir(doc), true, true);
+				install(file, getInstallDir(doc), overwrite, true);
 			}
 		}
 		

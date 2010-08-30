@@ -1,9 +1,11 @@
 package com.jayway.maven.plugins.android.standalonemojos.sdk;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -213,25 +215,7 @@ extends AbstractMojo
         			result = new File(dest, extracted[0].getName());
         		}
         		
-        		// directory exists already; probably from a previous install
-        		if(result.exists())
-        		{
-        			for(File f : extracted[0].listFiles())
-        			{
-        				if(f.isDirectory())
-        				{
-                    		FileUtils.copyDirectory(f, new File(result, f.getName()));
-        				}
-        				else
-        				{
-                    		FileUtils.copyFile(f, new File(result, f.getName()));
-        				}
-        			}
-        		}
-        		else
-        		{
-            		FileUtils.moveDirectory(extracted[0], result);
-        		}
+        		copyDir(extracted[0], result, overwrite);
         	}
         }
         catch (Exception e)
@@ -240,6 +224,55 @@ extends AbstractMojo
         }
         
         return result;
+	}
+	
+	private void copyDir(File src, File dest, boolean overwrite)
+	throws Exception
+	{
+		for(File f : src.listFiles())
+		{
+			File df = new File(dest, f.getName());
+
+			if(f.isDirectory())
+			{
+        		copyDir(f, df, overwrite);
+			}
+			else
+			{
+				if((df.exists() && overwrite) || !df.exists())
+				{
+	        		FileUtils.copyFile(f, df);
+	        		
+	        		// TODO: check if this is also necessary for Macs
+	        		if(f.canExecute() && isLinux())
+	        		{
+	        			System.out.println(">> Exe: " + df.getAbsolutePath());
+	        			
+	    				Process process = new ProcessBuilder("chmod", "+x", df.getAbsolutePath()).start();
+	    				
+	    	            try
+	    	            {
+	    		            int exit = process.waitFor();
+	    		            
+	    		            if(exit!=0)
+	    		            {
+	    			            print(process.getInputStream());
+	    			            print(process.getErrorStream());
+	    		            }
+	    	            }
+	    	            catch (InterruptedException e)
+	    	            {
+	    		            // TODO Auto-generated catch block
+	    		            e.printStackTrace();
+	    	            }
+	        		}
+				}
+				else if(verbose)
+				{
+					getLog().info("Skipping: " + df);
+				}
+			}
+		}
 	}
 	
 	public void writeSourceProperties(Item item)
@@ -368,7 +401,7 @@ extends AbstractMojo
 		}
 	}
 	
-	protected boolean isUnix()
+	protected boolean isLinux()
 	{
 		return (os.toLowerCase(Locale.ENGLISH).contains("linux"));
 	}
@@ -793,6 +826,28 @@ extends AbstractMojo
 		}
 	}
 	
+	private static void print(InputStream pis)
+	{
+		StringBuffer buf = new StringBuffer();
+		BufferedReader is = new BufferedReader(new InputStreamReader(pis));
+		String line = "";
+		
+		try
+		{
+			while((line = is.readLine()) != null)
+			{
+				buf.append(line);
+				buf.append(System.getProperty("line.separator"));
+			}
+			
+			System.out.println(buf);
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
 	class RootFileSelector
 	implements FileSelector
 	{
