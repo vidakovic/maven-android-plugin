@@ -151,7 +151,7 @@ extends AbstractMojo
 
 	public File downloadSdk()
 	{
-		String file = "android-sdk_r" + revision + "-" + os + (getArchitecture()==null? "" : "_" + getArchitecture()) + "." + ("linux".equals(os)? "tgz" : "zip");
+		String file = "android-sdk_r" + revision + "-" + getOs() + (getArchitecture()==null? "" : "_" + getArchitecture()) + "." + getSdkExtension();
 		
 		try
 		{
@@ -742,8 +742,18 @@ extends AbstractMojo
 
 	public String getOs()
     {
+		if(os==null)
+		{
+			os = getDefaultOperatingSystem();
+		}
+		
     	return os;
     }
+	
+	protected String getSdkExtension()
+	{
+		return "linux".equals(getOs())? "tgz" : "zip";
+	}
 
 	public void setOs(String os)
     {
@@ -762,6 +772,11 @@ extends AbstractMojo
 
 	public String getArchitecture()
     {
+		if("mac".equals(getOs()) || "linux".equals(getOs()))
+		{
+			return "86";
+		}
+		
     	return architecture;
     }
 
