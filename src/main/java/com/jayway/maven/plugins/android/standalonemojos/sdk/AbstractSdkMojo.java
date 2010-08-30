@@ -241,12 +241,15 @@ extends AbstractMojo
 			{
 				if((df.exists() && overwrite) || !df.exists())
 				{
+					// do this before the copy; otherwise the flag will be lost
+					boolean destExistsAndIsExe = df.canExecute();
+					
 	        		FileUtils.copyFile(f, df);
 	        		
 	        		// TODO: check if this is also necessary for Macs
-	        		if(f.canExecute() && isLinux())
+	        		if((f.canExecute() || destExistsAndIsExe) && isLinux())
 	        		{
-	        			System.out.println(">> Exe: " + df.getAbsolutePath());
+	        			getLog().info(">> Exe: " + df.getAbsolutePath());
 	        			
 	    				Process process = new ProcessBuilder("chmod", "+x", df.getAbsolutePath()).start();
 	    				

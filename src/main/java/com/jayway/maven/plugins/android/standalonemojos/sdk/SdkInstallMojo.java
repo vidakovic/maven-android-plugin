@@ -132,10 +132,7 @@ extends AbstractSdkMojo
 
 			if(file!=null && file.exists())
 			{
-				// There is a seperate tools package in the repository; 
-				// when unzipping it under Linux the execute flags are not 
-				// maintained. The tools package in the base SDK should be enough 
-				install(file, getInstallDir(t), false, true);
+				install(file, getInstallDir(t), overwrite, true);
 			}
 		}
     }
