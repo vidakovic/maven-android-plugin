@@ -16,6 +16,9 @@ extends AbstractSdkMojo
 	public void execute() 
 	throws MojoExecutionException, MojoFailureException
     {
+		// TODO: maybe find a better place
+		initConfiguration();
+		
 		try
         {
 			getLog().warn("Cleaning :" + sdkPath);
