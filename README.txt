@@ -24,20 +24,20 @@ Example configuration
         <configuration>
             <sdk>
                 <platform>2.1</platform>
+                <path>/tmp/.android-sdk/</path>
             </sdk>
+            <install>
+                <path>/tmp/.android-sdk/</path>
+                <agree>true</agree>
+                <verbose>true</verbose>
+            </install>
             <deleteConflictingFiles>true</deleteConflictingFiles>
-            
-            <!-- BEGIN: SDK installation config -->
-            <revision>06</revision>
-            <os>linux</os>
-            <architecture>86</architecture>
-            <overwrite>false</overwrite>
-            <agree>true</agree>
-            <verbose>true</verbose>
-            <!-- END: SDK installation config -->
         </configuration>
         <extensions>true</extensions>
     </plugin>
 
 ...
 [/pom]
+
+NOTE: the nested path tag in <install> will be removed. A small change is needed  
+      in AbstractAndroidMojo. 
