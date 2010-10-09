@@ -17,7 +17,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.shared.io.download.DownloadManager;
 import org.apache.maven.shared.io.logging.DefaultMessageHolder;
 import org.codehaus.plexus.archiver.UnArchiver;
@@ -30,6 +29,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.jayway.maven.plugins.android.AbstractAndroidMojo;
 import com.jayway.maven.plugins.android.standalonemojos.sdk.model.AddOn;
 import com.jayway.maven.plugins.android.standalonemojos.sdk.model.Archive;
 import com.jayway.maven.plugins.android.standalonemojos.sdk.model.Doc;
@@ -46,49 +46,56 @@ import com.jayway.maven.plugins.android.standalonemojos.sdk.model.Tool;
  * @author aleksandar.vidakovic@gmail.com
  */
 public abstract class AbstractSdkMojo
-extends AbstractMojo
+extends AbstractAndroidMojo
 {
     /**
      * @parameter expression="${android.sdk.path}"
      */
 	protected File sdkPath = new File(System.getProperty("user.home") + "/.m2/repository/.android-sdk/");
     /**
-     * @parameter expression="${android.sdk.os}" 
+     * @parameter expression="${android.install.os}" 
      */
 	protected String os;
     /**
-     * @parameter expression="${android.sdk.revision}"
+     * @parameter expression="${android.install.revision}"
      */
 	protected String revision = "06";
     /**
-     * The Fonz
-     * @parameter expression="${android.sdk.architecture}"
+     * @parameter expression="${android.install.architecture}"
      */
 	protected String architecture;
     /**
-     * @parameter expression="${android.sdk.repositoryUrl}"
+     * @parameter expression="${android.install.repositoryUrl}"
      */
 	protected String repositoryUrl = "http://dl-ssl.google.com/android/repository/";
     /**
-     * @parameter expression="${android.sdk.url}"
+     * @parameter expression="${android.install.url}"
      */
 	protected String sdkUrl = "http://dl.google.com/android/";
     /**
-     * @parameter expression="${android.sdk.downloadDir}"
+     * @parameter expression="${android.install.downloadDir}"
      */
 	protected String downloadDir = System.getProperty("user.home") + "/.m2/repository/.android-sdk/downloads/";
     /**
-     * @parameter expression="${android.sdk.overwrite}"
+     * @parameter expression="${android.install.overwrite}"
      */
 	protected Boolean overwrite = false;
     /**
-     * @parameter expression="${android.sdk.agree}"
+     * @parameter expression="${android.install.agree}"
      */
 	protected Boolean agree = false;
     /**
-     * @parameter expression="${android.sdk.verbose}"
+     * @parameter expression="${android.install.verbose}"
      */
 	protected Boolean verbose = false;
+    /**
+     * @parameter expression="${android.install.obsolete}"
+     */
+	protected Boolean obsolete = false;
+    /**
+     * @parameter
+     */
+	private Install install;
 
 	protected Map<String, String> apiLevelToVersion = new HashMap<String, String>();
 	
@@ -174,7 +181,7 @@ extends AbstractMojo
 	{
 		// TODO: use later the Maven infrastructure for file traversals; this is a bit of a hack, but works so far
 
-		File tmp = new File(downloadDir, "tmp");
+		File tmp = new File(downloadDir, "tmp/" + fromFile.getName());
         tmp.mkdirs();
         
         File result = null;
@@ -341,47 +348,59 @@ extends AbstractMojo
 
 	protected File downloadItem(Item item, String os)
 	{
-		String file = null;
-		
-		for (Archive archive : item.getArchives())
+		if(!item.getObsolete() || obsolete)
 		{
-			if (os.equals(escapeOs(archive.getOs())))
-			{
-				file = archive.getUrl();
-				break;
-			}
-		}
-		
-		if(file==null)
-		{
+			String file = null;
+			
 			for (Archive archive : item.getArchives())
 			{
-				if ("any".equals(archive.getOs()))
+				if (os.equals(escapeOs(archive.getOs())))
 				{
 					file = archive.getUrl();
 					break;
 				}
 			}
-		}
-
-		try
-		{
-			if (file != null)
+			
+			if(file==null)
 			{
-				download(repositoryUrl + file, downloadDir + file, overwrite);
-
-	        	if(verbose)
-	        	{
-	    			getLog().info(item.getDescription() + " (" + repositoryUrl + file + " downloaded to " + downloadDir + file + ")");
-	        	}
+				for (Archive archive : item.getArchives())
+				{
+					if ("any".equals(archive.getOs()))
+					{
+						file = archive.getUrl();
+						break;
+					}
+				}
 			}
-		}
-		catch (Exception e)
-		{
-			getLog().error(e.getMessage(), e);
-		}
 
-    	return new File(downloadDir + file);
+			try
+			{
+				if (file != null)
+				{
+					download(repositoryUrl + file, downloadDir + file, overwrite);
+
+		        	if(verbose)
+		        	{
+		    			getLog().info(item.getDescription() + " (" + repositoryUrl + file + " downloaded to " + downloadDir + file + ")");
+		        	}
+				}
+			}
+			catch (Exception e)
+			{
+				getLog().error(e.getMessage(), e);
+			}
+
+	    	return new File(downloadDir + file);
+		}
+		else
+		{
+	    	if(verbose)
+	    	{
+				getLog().warn("Skipping obsolete item: " + item.getDescription());
+	    	}
+	    	
+	    	return null;
+		}
 	}
 	
 	protected String escapeOs(String os)
@@ -792,7 +811,9 @@ extends AbstractMojo
 	
 	protected File getInstallDir()
 	{
-		File path = new File(sdkPath, "android-sdk-" + os + (architecture!=null? "_" + architecture : ""));
+		// TODO: simplify this!
+		//File path = new File(sdkPath, "android-sdk-" + os + (architecture!=null? "_" + architecture : ""));
+		File path = sdkPath;
 		
 		if(!path.exists())
 		{
@@ -805,6 +826,109 @@ extends AbstractMojo
 	protected File getInstallDir(Item item)
 	{
 		return new File(getInstallDir(), item.getInstallSubDir());
+	}
+
+	public Boolean getObsolete()
+    {
+    	return obsolete;
+    }
+
+	public void setObsolete(Boolean obsolete)
+    {
+    	this.obsolete = obsolete;
+    }
+	
+	public Install getInstall()
+    {
+    	return install;
+    }
+
+	public void setInstall(Install install)
+    {
+    	this.install = install;
+    }
+
+	protected void initConfiguration()
+	{
+		// TODO: do sdk has to be protected not private
+		
+//		if(sdk!=null)
+//		{
+//			sdkPath = sdk.getPath();
+//		}
+		
+        if (install != null) 
+        {
+            // An <install> tag exists in the pom.
+
+        	// TODO: remove this when sdk from parent class is available
+            if (install.getPath() != null)
+            {
+                // An <install><path> tag is set in the pom.
+
+                sdkPath = install.getPath();
+            }
+            if (install.getObsolete() != null)
+            {
+                // An <install><obsolete> tag is set in the pom.
+
+                obsolete = install.getObsolete();
+            }
+            if (install.getAgree() != null)
+            {
+                // An <install><agree> tag is set in the pom.
+
+                agree = install.getAgree();
+            }
+            if (install.getOverwrite() != null)
+            {
+                // An <install><overwrite> tag is set in the pom.
+
+                overwrite = install.getOverwrite();
+            }
+            if (install.getVerbose() != null)
+            {
+                // An <install><verbose> tag is set in the pom.
+
+                verbose = install.getVerbose();
+            }
+            if (install.getRevision() != null)
+            {
+                // An <install><revision> tag is set in the pom.
+
+                revision = install.getRevision();
+            }
+            if (install.getOs() != null)
+            {
+                // An <install><os> tag is set in the pom.
+
+                os = install.getOs();
+            }
+            if (install.getArchitecture() != null)
+            {
+                // An <install><architecture> tag is set in the pom.
+
+                architecture = install.getArchitecture();
+            }
+            if (install.getRepositoryUrl() != null)
+            {
+                // An <install><repositoryUrl> tag is set in the pom.
+
+                repositoryUrl = install.getRepositoryUrl();
+            }
+            if (install.getSdkUrl() != null)
+            {
+                // An <install><sdkUrl> tag is set in the pom.
+
+                sdkUrl = install.getSdkUrl();
+            }
+            if (install.getDownloadDir() != null)
+            {
+                // An <install><downloadDir> tag is set in the pom.
+
+                downloadDir = install.getDownloadDir();
+            }
+        }
 	}
 
 	protected static String getDefaultOperatingSystem()

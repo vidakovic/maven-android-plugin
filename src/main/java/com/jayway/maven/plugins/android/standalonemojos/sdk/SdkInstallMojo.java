@@ -28,6 +28,9 @@ extends AbstractSdkMojo
 	public void execute() 
 	throws MojoExecutionException, MojoFailureException
     {
+		// TODO: maybe find a better place
+		initConfiguration();
+		
 		// step 1: refresh and parse repository
 		Repository repository = downloadRepository();
 		
@@ -66,7 +69,7 @@ extends AbstractSdkMojo
 		File sdkFile = downloadSdk();
 		
 		// step 4: install SDK
-		install(sdkFile, getInstallRoot(), overwrite, false);
+		install(sdkFile, getInstallDir(), overwrite, true);
 		
 		// platform
 		for(Platform platform : repository.getPlatforms())
@@ -132,8 +135,14 @@ extends AbstractSdkMojo
 
 			if(file!=null && file.exists())
 			{
-				install(file, getInstallDir(t), overwrite, true);
+				// ensure to install the newest tools; this is independent of overwrite
+				install(file, getInstallDir(t), (Integer.valueOf(revision).intValue() < Integer.valueOf(t.getRevision()).intValue()), true);
 			}
+		}
+		
+		if(System.getenv("ANDROID_HOME")==null || "".equals(System.getenv("ANDROID_HOME")))
+		{
+			getLog().warn("Please set your ANDROID_HOME environment variable to: " + sdkPath);
 		}
     }
 }
